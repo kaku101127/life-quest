@@ -24,16 +24,19 @@ function App() {
     // 今あるリストの最後に新しいクエストをくっつける
     setProjects([...projects, fullQuest]);
   };
-
+  
   const handleUpdate = (amount) => {
     setStatsData(prev => {
       const newData = [...prev];
-      const today = newData.length - 1;
-      const newTime = newData[today].time + amount;
-      newData[today] = { 
-        ...newData[today], 
-        time: newTime,
-        progress: Math.min(newTime, 100)
+      const todayIdx = newData.length - 1;
+      // 既存の値を強制的に数字にする
+      const currentVal = parseFloat(newData[todayIdx].time) || 0;
+      const nextVal = currentVal + amount;
+      
+      newData[todayIdx] = { 
+        ...newData[todayIdx], 
+        time: nextVal,
+        progress: Math.min(nextVal, 100)
       };
       return newData;
     });
@@ -88,7 +91,11 @@ function App() {
     <StatsPage 
       questTitle={selectedQuestName}
       statsData={statsData}
-      currentProgress={statsData[statsData.length - 1].progress}
+      currentProgress={
+        statsData[statsData.length - 1].progress !== undefined 
+        ? statsData[statsData.length - 1].progress 
+        : Math.min(statsData[statsData.length - 1].time, 100) // timeから計算
+      }
       onUpdate={handleUpdate}
       onBack={() => setViewMode('top')}
     />

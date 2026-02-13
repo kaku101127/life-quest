@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import ProgressCircle from './ProgressCircle';
 
-const QuestTabs = ({ onUpdate }) => {
+const TargetTabs = ({ onUpdate, currentProgress }) => {
   const [activeTab, setActiveTab] = useState('targets');
 
   return (
@@ -11,7 +12,7 @@ const QuestTabs = ({ onUpdate }) => {
       {/* タブヘッダー */}
       <div style={{ display: 'flex', borderBottom: '3px solid #111' }}>
         <button onClick={() => setActiveTab('targets')} style={{ flex: 1, padding: '15px', border: 'none', background: activeTab === 'targets' ? '#111' : '#fff', color: activeTab === 'targets' ? '#fff' : '#111', fontWeight: '900', cursor: 'pointer' }}>TARGETS</button>
-        <button onClick={() => setActiveTab('action')} style={{ flex: 1, padding: '15px', border: 'none', background: activeTab === 'action' ? '#111' : '#fff', color: activeTab === 'action' ? '#fff' : '#111', fontWeight: '900', cursor: 'pointer', borderLeft: '3px solid #111' }}>ACTION</button>
+        <button onClick={() => setActiveTab('action')} style={{ flex: 1, padding: '15px', border: 'none', background: activeTab === 'action' ? '#111' : '#fff', color: activeTab === 'action' ? '#fff' : '#111', fontWeight: '900', cursor: 'pointer', borderLeft: '3px solid #111' }}>SETTING</button>
       </div>
 
       {/* タブ内容 */}
@@ -38,4 +39,4 @@ const QuestTabs = ({ onUpdate }) => {
   );
 };
 
-export default QuestTabs;
+export default TargetTabs;

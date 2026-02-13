@@ -2,10 +2,14 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const ProgressCircle = ({ currentProgress }) => {
+
+  // 数値が NaN や undefined の場合に 0 に固定するガード
+  const displayProgress = isNaN(currentProgress) || currentProgress === undefined ? 0 : currentProgress;
+  
   // データの形をここで定義（App.jsxをスッキリさせるため）
   const pieData = [
-    { value: currentProgress },
-    { value: Math.max(0, 100 - currentProgress) }
+    { value: displayProgress },
+    { value: Math.max(0, 100 - displayProgress) }
   ];
 
   return (
@@ -17,7 +21,7 @@ const ProgressCircle = ({ currentProgress }) => {
         <ResponsiveContainer>
           <PieChart>
             <Pie data={pieData} innerRadius={35} outerRadius={45} stroke="none" dataKey="value" startAngle={90} endAngle={450}>
-              <Cell fill={currentProgress >= 80 ? "#FFD700" : "#4CAF50"} />
+              <Cell fill={displayProgress >= 80 ? "#FFD700" : "#4CAF50"} />
               <Cell fill="#333" />
             </Pie>
           </PieChart>
@@ -26,7 +30,7 @@ const ProgressCircle = ({ currentProgress }) => {
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
           fontSize: '1.4rem', fontWeight: '900' 
         }}>
-          {currentProgress}%
+          {displayProgress}%
         </div>
       </div>
       <div style={{ fontSize: '0.7rem', fontWeight: '900', letterSpacing: '2px', color: '#888' }}>
