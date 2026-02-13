@@ -26,7 +26,7 @@ const TopPage = ({ projects, onStartQuest, onAdd, onStartFocus }) => {
             key={index} 
             project={p} 
             onStatsClick={onStartQuest} 
-            onFocusClick={onStartFocus} // これで上の引数と繋がります！
+            onFocusClick={onStartFocus} 
           />
         ))}
       </div>
