@@ -69,6 +69,8 @@ const FocusPage = ({ project, onFinish, onCancel }) => {
         completedSubIds={completedSubIds}
         initialNote={interimNote} 
         onSave={handleFinalSave}
+        onBack={() => setShowResult(false)} // これでタイマー画面に戻れる
+        onCancel={onCancel}                 // 親(App.jsx)から引き継いだキャンセル処理（トップへ戻る）を実行
       />
     );
   }
