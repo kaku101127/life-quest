@@ -9,8 +9,14 @@ function App() {
     { 
       id: 1, 
       name: 'English Study', 
-      // ... (other properties)
-      history: [] // --- [DATA SECTION] ここに過去の全ログが蓄積されます ---
+      target: 100,
+      unit: 'Hours',
+      mainGoal: 'Daily Conversation',
+      subTargets: [
+        { id: 101, text: 'Read 10 pages', type: 'count', goal: 10, current: 0, completed: false },
+        { id: 102, text: 'Memo 5 words', type: 'check', completed: false }
+      ],
+      history: [] 
     }
   ]);
   
@@ -21,19 +27,18 @@ function App() {
 
   // --- Handlers (Logic) ---
 
-  // クエスト追加
   const handleAddQuest = (newQuestData) => {
     const fullQuest = {
       ...newQuestData,
       id: Date.now(),
       totalMins: 0,
       currentProgress: 0,
-      color: '#' + Math.floor(Math.random()*16777215).toString(16)
+      color: '#' + Math.floor(Math.random()*16777215).toString(16),
+      history: []
     };
     setProjects([...projects, fullQuest]);
   };
   
-  // 統計データの更新
   const handleUpdateStats = (amount) => {
     setStatsData(prev => {
       const newData = [...prev];
@@ -49,61 +54,62 @@ function App() {
     });
   };
 
-  // フォーカス開始
   const handleStartFocus = (project) => {
     setSelectedProject(project);
     setSelectedQuestName(project.name); 
     setViewMode('focus');
   };
   
-  // 統計画面への遷移
-  // --- 修正箇所A: handleViewStats を ID で受けるように変更 ---
   const handleViewStats = (id) => {
     const target = projects.find(p => p.id === id);
     if (target) {
-      setSelectedProject(target);      // オブジェクトごと保存
-      setSelectedQuestName(target.name); // 表示用タイトル
+      setSelectedProject(target);
+      setSelectedQuestName(target.name);
       setViewMode('stats');
     }
   };
 
-  // フォーカス終了とデータ保存
-  // --- [LOGIC SECTION] フォーカス終了時のデータ処理 ---
+  // --- [LOGIC SECTION] フォーカス終了時のデータ処理（ここを改良） ---
   const handleFinishFocus = (result) => {
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === result.questId) {
         
-        // 1. 小目標の完了状態を更新
+        // 1. 小目標の更新 (数値の現在地と完了状態の両方を反映)
         const updatedSubTargets = p.subTargets.map(st => {
-          if (result.completedSubIds.includes(st.id)) {
-            return { ...st, completed: true };
-          }
-          return st;
+          // ResultViewから送られてきた「この小目標の最新状態」を探す
+          const update = result.subTargetUpdates?.find(u => u.id === st.id);
+          
+          return { 
+            ...st, 
+            // 完了チェックが入っている、もしくは今回の更新でゴールに達していれば完了(true)
+            completed: result.completedSubIds.includes(st.id) || (update && update.current >= st.goal),
+            // 新しい数値があれば上書き、なければ今のまま
+            current: update ? update.current : (st.current || 0)
+          };
         });
 
-        // 2. 今回のセッション内容を「履歴」としてパッケージ化
+        // 2. 履歴（ログ）の作成
         const newLog = {
           id: Date.now(),
-          date: result.timestamp,      // 実施日時
-          minutes: result.minutes,     // 集中した時間
-          count: result.count,         // 実施回数
-          metric: result.trackingValue,// 体重やスコアなどの数値
-          note: result.note,           // メモ
-          achievedSubs: result.completedSubIds // 今回達成した小目標のIDリスト
+          date: result.timestamp,
+          minutes: result.minutes,      // タイマーまたは手入力の分
+          count: result.count,          // セッション回数
+          note: result.note,            // 最終的なメモ
+          achievedSubs: result.completedSubIds // 今回チェックを入れたID
         };
 
-        // 3. 進捗の計算（時間または回数を現在の進捗に加算）
+        // 3. 全体進捗の計算
+        // 時間単位のクエストなら「分を時間に変換」して加算、それ以外は「回数」を加算
         const progressIncrement = (p.unit === 'Hours' || p.unit === '時間') 
           ? result.minutes / 60 
           : result.count;
 
-        // --- [STATE UPDATE] プロジェクト情報を更新して履歴を追加 ---
         return {
           ...p,
           currentProgress: (p.currentProgress || 0) + progressIncrement,
           totalMins: (p.totalMins || 0) + result.minutes,
-          subTargets: updatedSubTargets,
-          history: [...(p.history || []), newLog] // 既存の履歴に新しいログを合体
+          subTargets: updatedSubTargets, // 改良された小目標リスト
+          history: [...(p.history || []), newLog]
         };
       }
       return p;
@@ -112,8 +118,6 @@ function App() {
     setViewMode('top');
   };
 
-  // --- Render Logic (UI Display) ---
-  // ページごとにレンダリング関数を分けることで、App.jsxの可読性を高めます
   const renderContent = () => {
     switch (viewMode) {
       case 'focus':
@@ -124,16 +128,12 @@ function App() {
             onCancel={() => setViewMode('top')}
           />
         );
-      // --- 修正箇所B: renderContent の stats ケース ---
       case 'stats':
-        // selectedProject.id を使って、最新の projects ステートからデータを探す
         const currentProj = projects.find(p => p.id === selectedProject?.id);
-
         return (
           <StatsPage 
             questTitle={selectedQuestName}
             statsData={statsData}
-            // 最新の history を確実に渡す
             history={currentProj ? currentProj.history : []} 
             currentProgress={
               statsData[statsData.length - 1].progress !== undefined 
