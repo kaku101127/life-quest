@@ -11,7 +11,7 @@
 - アクティビティヒートマップ
 
 ## 技術スタック
-- React
+- React  : Recharts仕様ののためVersionを18にOverrideしている
 - Vite
 - Recharts
 - Lucide React
