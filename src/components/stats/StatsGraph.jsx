@@ -44,7 +44,7 @@ const StatsGraph = ({ data }) => {
             isAnimationActive={false} // デバッグ中なので一旦アニメオフ
           />
 
-          {/* 達成率の線（右軸：progressを参照） */}
+          {/* 達成率の線（右軸：progressを参照） 
           <Area 
             yAxisId="right"
             type="monotone" 
@@ -54,7 +54,7 @@ const StatsGraph = ({ data }) => {
             fill="transparent"
             strokeDasharray="5 5"
             isAnimationActive={false}
-          />
+          />*/}
         </AreaChart>
       </ResponsiveContainer>
     </div>

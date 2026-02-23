@@ -1,99 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import FocusTimerView from '../components/FocusTimerView';
-import FocusResultView from '../components/FocusResultView';
+import SubTargetItem from '../components/common/SubTargetItem';
 
 const FocusPage = ({ project, onFinish, onCancel }) => {
-  // --- [STATE] タイマー制御 ---
+  const [phase, setPhase] = useState('timer'); // 'timer' or 'result'
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(true);
-  const [showResult, setShowResult] = useState(false);
-
-  // --- [STATE] 手入力モード用 ---
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [manualMinutes, setManualMinutes] = useState("");
-
-  // --- [STATE] 入力データ ---
-  const [sessionCount, setSessionCount] = useState(0);
-  const [completedSubIds, setCompletedSubIds] = useState([]);
-  const [interimNote, setInterimNote] = useState('');
-
-  // --- [LOGIC] タイマー ---
+  const [currentSubTargets, setCurrentSubTargets] = useState(project.subTargets || []);
+  
+  // --- タイマーロジック (1箇所に集約) ---
   useEffect(() => {
-    let interval = null;
-    // 手入力モード時はタイマーを止める
-    if (isActive && !showResult && !isManualMode) {
-      interval = setInterval(() => setSeconds(s => s + 1), 1000);
-    } else {
-      clearInterval(interval);
-    }
+    let interval = isActive && phase === 'timer' ? setInterval(() => setSeconds(s => s + 1), 1000) : null;
     return () => clearInterval(interval);
-  }, [isActive, showResult, isManualMode]);
+  }, [isActive, phase]);
 
-  const formatTime = (s) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+  // --- ハンドラー (一括管理) ---
+  const handleTargetAction = (action, id, payload) => {
+    if (action === 'add') {
+      const newSub = { id: Date.now(), name: payload, type: 'check', completed: false };
+      setCurrentSubTargets([...currentSubTargets, newSub]);
+    }
+    if (action === 'delete') setCurrentSubTargets(currentSubTargets.filter(t => t.id !== id));
+    if (action === 'toggle') {
+      setCurrentSubTargets(currentSubTargets.map(t => t.id === id ? {...t, completed: !t.completed} : t));
+    }
   };
 
-  const toggleSubTarget = (id) => {
-    setCompletedSubIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+  // --- 内部部品 A: タイマー表示 ---
+  const TimerView = () => (
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>{project.name}</h1>
+      <div style={timerCircleStyle}>{Math.floor(seconds / 60)}:{(seconds % 60).toString().padStart(2, '0')}</div>
+      
+      <div style={listContainerStyle}>
+        {currentSubTargets.map(st => (
+          <SubTargetItem key={st.id} st={st} mode="manage" onAction={(type, id) => handleTargetAction(type, id)} />
+        ))}
+      </div>
+      
+      <button onClick={() => setPhase('result')} style={mainBtnStyle}>FINISH SESSION</button>
+    </div>
+  );
 
-  // --- [LOGIC] 最終保存処理 ---
-  const handleFinalSave = (finalResultData) => {
-    // 手入力があればそれを優先、なければタイマーの分を計算
-    const finalMinutes = isManualMode ? Number(finalResultData.minutes) : Math.floor(seconds / 60);
+  // --- 内部部品 B: 結果入力 ---
+  const ResultView = () => (
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>MISSION COMPLETE</h1>
+      <div style={listContainerStyle}>
+        {currentSubTargets.map(st => (
+          <SubTargetItem key={st.id} st={st} mode="check" onAction={(type, id) => handleTargetAction(type, id)} />
+        ))}
+      </div>
+      <button onClick={() => onFinish({ ...project, subTargets: currentSubTargets, mins: Math.floor(seconds/60) })} style={mainBtnStyle}>SAVE & REPORT</button>
+    </div>
+  );
 
-    onFinish({
-      questId: project.id,
-      minutes: finalMinutes,
-      count: Number(finalResultData.count),
-      completedSubIds: finalResultData.completedSubIds,
-      subTargetUpdates: finalResultData.subTargetUpdates, // 各小目標の最新数値
-      note: finalResultData.note,
-      timestamp: new Date().toISOString()
-    });
-  };
-
-  // 1. リザルト画面
-  if (showResult) {
-    return (
-      <FocusResultView 
-        project={project}
-        // タイマーの結果または手入力を初期値として渡す
-        initialMinutes={isManualMode ? manualMinutes : Math.floor(seconds / 60)}
-        formatTime={formatTime}
-        sessionCount={sessionCount}
-        completedSubIds={completedSubIds}
-        initialNote={interimNote} 
-        onSave={handleFinalSave}
-        onBack={() => setShowResult(false)} // これでタイマー画面に戻れる
-        onCancel={onCancel}                 // 親(App.jsx)から引き継いだキャンセル処理（トップへ戻る）を実行
-      />
-    );
-  }
-
-  // 2. タイマー画面
   return (
-    <FocusTimerView 
-      project={project}
-      seconds={seconds}
-      formatTime={formatTime}
-      isActive={isActive}
-      setIsActive={setIsActive}
-      // 手入力用プロップスを追加
-      isManualMode={isManualMode}
-      setIsManualMode={setIsManualMode}
-      manualMinutes={manualMinutes}
-      setManualMinutes={setManualMinutes}
-      interimNote={interimNote}
-      setInterimNote={setInterimNote}
-      onShowResult={() => setShowResult(true)}
-      onCancel={onCancel}
-    />
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', padding: '20px' }}>
+      {phase === 'timer' ? <TimerView /> : <ResultView />}
+    </div>
   );
 };
+
+// スタイルは末尾にまとめて定義（またはCSS変数へ）
+const containerStyle = { maxWidth: '500px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' };
+const titleStyle = { fontSize: '1.2rem', color: '#00ffff', textAlign: 'center' };
+const timerCircleStyle = { fontSize: '4rem', fontWeight: 'bold', textAlign: 'center', padding: '40px 0' };
+const listContainerStyle = { display: 'flex', flexDirection: 'column', gap: '10px' };
+const mainBtnStyle = { background: '#00ffff', color: '#000', padding: '15px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer' };
 
 export default FocusPage;
